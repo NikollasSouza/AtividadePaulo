@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Cadastro de Pessoas</title>
+    <link rel="stylesheet" href="formulario.css" />
+</head>
+<body>
+    <div class="box">
+        <form id="formCadastro" method="POST">
+            <fieldset>
+                <legend>Cadastro para Pessoas</legend>
+
+                <div class="inputBox">
+                    <input type="text" name="nome" id="nome" class="inputUser" required />
+                    <label for="nome" class="labelInput">Nome completo</label>
+                </div>
+                <br><br>
+                <div class="inputBox">
+                    <input type="tel" name="telefone" id="telefone" class="inputUser" required />
+                    <label for="telefone" class="labelInput">Telefone</label>
+                </div>
+                <br><br>
+                <div class="inputBox">
+                    <input type="text" name="cpf" id="cpf" placeholder="123.456.789-09" required />
+                    <label for="cpf" class="labelInput">CPF</label>
+                </div>
+                <br><br>
+                <button type="submit" class="btnCadastro">Cadastrar</button>
+                <br><br>
+                <button type="button" id="btnListar" class="btnListar">Listar Pessoas</button>
+            </fieldset>
+        </form>
+    </div>
+
+    <div id="lista-pessoas"></div>
+
+    <script>
+        const form = document.getElementById('formCadastro');
+        const btnListar = document.getElementById('btnListar');
+        const lista = document.getElementById('lista-pessoas');
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            formData.append('acao', 'cadastrar');
+
+            fetch('../Controller/controlePessoa.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.mensagem);
+                if (data.status === 'sucesso') {
+                    form.reset();
+                }
+            })
+            .catch(err => {
+                alert('Erro ao cadastrar: ' + err.message);
+            });
+        });
+
+        btnListar.addEventListener('click', function() {
+            fetch('../Controller/controlePessoa.php', {
+                method: 'POST',
+                body: new URLSearchParams('acao=listar')
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'sucesso' && data.dados.length > 0) {
+                    let tabela = `
+                        <h3>Pessoas Cadastradas</h3>
+                        <table>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Telefone</th>
+                            </tr>
+                    `;
+                    data.dados.forEach(pessoa => {
+                        tabela += `
+                            <tr>
+                                <td>${pessoa.id}</td>
+                                <td>${pessoa.nome}</td>
+                                <td>${pessoa.cpf}</td>
+                                <td>${pessoa.telefone}</td>
+                            </tr>
+                        `;
+                    });
+                    tabela += `</table>`;
+                    lista.innerHTML = tabela;
+                } else if (data.dados && data.dados.length === 0) {
+                    lista.innerHTML = '<p>Nenhuma pessoa cadastrada.</p>';
+                } else {
+                    lista.innerHTML = `<p style="color: red;">Erro: ${data.mensagem}</p>`;
+                }
+                
+            })
+            .catch(err => {
+                lista.innerHTML = `<p style="color: red;">Erro na comunicação: ${err.message}</p>`;
+            });
+        });
+        
+        
+    </script>
+</body>
+</html>
