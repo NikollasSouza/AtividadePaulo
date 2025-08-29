@@ -3,5 +3,4 @@ feito isso coloque a pasta com os arquivos no htdocs dentro do xampp no disco lo
 o endereço correto, "localhost/AtividadePaulo/HTML/formulario.html" e assim conseguirá executar o sistema sem problemas.
 
 Feito por:
-Nikollas Beneveni de Souza
-Kaue Alves da Rocha
+Nikollas Beneveni de Souza e Kaue Alves da Rocha
