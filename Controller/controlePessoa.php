@@ -56,5 +56,25 @@ switch ($acao) {
     default:
         echo json_encode(['status' => 'erro', 'mensagem' => 'Ação inválida.']);
         break;
+
+    case 'excluir':
+    try {
+        $id = $_POST['id'] ?? null;
+
+        if (!$id || !is_numeric($id)) {
+            echo json_encode(['status' => 'erro', 'mensagem' => 'ID inválido.']);
+            exit;
+        }
+
+        // Chamar o model para excluir
+        if ($model->excluir($id)) {
+            echo json_encode(['status' => 'sucesso', 'mensagem' => 'Pessoa excluída com sucesso!']);
+        } else {
+            echo json_encode(['status' => 'erro', 'mensagem' => 'Falha ao excluir.']);
+        }
+    } catch (Exception $e) {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Erro: ' . $e->getMessage()]);
+    }
+    break;
 }
 ?>

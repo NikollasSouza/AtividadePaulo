@@ -33,6 +33,18 @@
             </fieldset>
         </form>
     </div>
+    <!-- Modal para exibir a lista de pessoas -->
+<div id="modalLista" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Pessoas Cadastradas</h3>
+            <span id="closeModal" class="close">&times;</span>
+        </div>
+        <div id="modal-body">
+            <!-- A tabela será inserida aqui pelo JavaScript -->
+        </div>
+    </div>
+</div>
 
     <div id="lista-pessoas"></div>
 
@@ -40,6 +52,8 @@
         const form = document.getElementById('formCadastro');
         const btnListar = document.getElementById('btnListar');
         const lista = document.getElementById('lista-pessoas');
+        const modal = document.getElementById('modalLista');
+const modalBody = document.getElementById('modal-body'); // ← Isso só funciona se o HTML estiver lá!
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -70,40 +84,89 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.status === 'sucesso' && data.dados.length > 0) {
-                    let tabela = `
-                        <h3>Pessoas Cadastradas</h3>
-                        <table>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nome</th>
-                                <th>CPF</th>
-                                <th>Telefone</th>
-                            </tr>
-                    `;
-                    data.dados.forEach(pessoa => {
-                        tabela += `
-                            <tr>
-                                <td>${pessoa.id}</td>
-                                <td>${pessoa.nome}</td>
-                                <td>${pessoa.cpf}</td>
-                                <td>${pessoa.telefone}</td>
-                            </tr>
-                        `;
-                    });
-                    tabela += `</table>`;
-                    lista.innerHTML = tabela;
-                } else if (data.dados && data.dados.length === 0) {
-                    lista.innerHTML = '<p>Nenhuma pessoa cadastrada.</p>';
-                } else {
-                    lista.innerHTML = `<p style="color: red;">Erro: ${data.mensagem}</p>`;
-                }
-                
-            })
+    if (data.status === 'sucesso' && data.dados.length > 0) {
+        let tabela = `
+            <div class="modal-body-table">
+                <table>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>Telefone</th>
+                        <th>Ações</th>
+                    </tr>
+        `;
+        data.dados.forEach(pessoa => {
+            tabela += `
+                <tr>
+                    <td>${pessoa.id}</td>
+                    <td>${pessoa.nome}</td>
+                    <td>${pessoa.cpf}</td>
+                    <td>${pessoa.telefone}</td>
+                    <td>
+                        <button 
+                            class="btnExcluir"
+                            onclick="excluirPessoa(${pessoa.id}, '${pessoa.nome}')"
+                            style="
+                                background: #e74c3c; 
+                                color: white; 
+                                border: none; 
+                                padding: 6px 10px; 
+                                font-size: 0.85em; 
+                                border-radius: 4px; 
+                                cursor: pointer;">
+                            Excluir
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        tabela += `</table></div>`;
+        tabela += `<div class="modal-footer">Total: ${data.dados.length} pessoa(s) cadastrada(s)</div>`;
+        modalBody.innerHTML = tabela;
+    } else if (data.dados && data.dados.length === 0) {
+        modalBody.innerHTML = `
+            <p style="text-align: center; color: #777; font-style: italic; padding: 20px;">
+                😊 Nenhuma pessoa cadastrada ainda.
+            </p>
+        `;
+    } else {
+        modalBody.innerHTML = `
+            <p style="color: red; text-align: center;">
+                ⚠️ Erro: ${data.mensagem}
+            </p>
+        `;
+    }
+})
             .catch(err => {
                 lista.innerHTML = `<p style="color: red;">Erro na comunicação: ${err.message}</p>`;
             });
         });
+        // Função para excluir uma pessoa
+function excluirPessoa(id, nome) {
+    const confirmado = confirm(`Tem certeza que deseja excluir ${nome}?`);
+    
+    if (!confirmado) return;
+
+    fetch('../Controller/controlePessoa.php', {
+        method: 'POST',
+        body: new URLSearchParams({
+            'acao': 'excluir',
+            'id': id
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.mensagem);
+        if (data.status === 'sucesso') {
+            // Atualiza a lista automaticamente
+            document.getElementById('btnListar').click();
+        }
+    })
+    .catch(err => {
+        alert('Erro ao excluir: ' + err.message);
+    });
+}
         
         
     </script>
