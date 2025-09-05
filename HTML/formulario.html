@@ -5,6 +5,115 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Cadastro de Pessoas</title>
     <link rel="stylesheet" href="formulario.css" />
+
+    <style>
+        /* Estilo do Modal de Edição */
+        .modal-edit {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-edit-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-edit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .modal-edit-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .close-edit {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+        }
+
+        .close-edit:hover {
+            color: #000;
+        }
+
+        .modal-edit-body {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .modal-edit-body label {
+            font-weight: 600;
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        .modal-edit-body input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .modal-edit-footer {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .btnSalvar {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btnSalvar:hover {
+            background: #219653;
+        }
+
+        .btnCancelar {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .btnCancelar:hover {
+            background: #7f8c8d;
+        }
+    </style>
 </head>
 <body>
     <div class="box">
@@ -33,33 +142,47 @@
             </fieldset>
         </form>
     </div>
-    <!-- Modal para exibir a lista de pessoas -->
-<div id="modalLista" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Pessoas Cadastradas</h3>
-            <span id="closeModal" class="close">&times;</span>
-        </div>
-        <div id="modal-body">
-            <!-- A tabela será inserida aqui pelo JavaScript -->
+
+    <!-- Modal de Edição -->
+    <div id="modalEdit" class="modal-edit">
+        <div class="modal-edit-content">
+            <div class="modal-edit-header">
+                <h3>Editar Pessoa</h3>
+                <span class="close-edit" id="closeEdit">&times;</span>
+            </div>
+            <div class="modal-edit-body">
+                <input type="hidden" id="editId" />
+                <label>Nome: <input type="text" id="editNome" /></label>
+                <label>CPF: <input type="text" id="editCpf" placeholder="123.456.789-09" /></label>
+                <label>Telefone: <input type="tel" id="editTelefone" /></label>
+            </div>
+            <div class="modal-edit-footer">
+                <button class="btnCancelar" id="btnCancelarEdit">Cancelar</button>
+                <button class="btnSalvar" id="btnSalvarEdit">Salvar</button>
+            </div>
         </div>
     </div>
-</div>
 
+    <!-- Área da lista -->
     <div id="lista-pessoas"></div>
 
     <script>
         const form = document.getElementById('formCadastro');
         const btnListar = document.getElementById('btnListar');
         const lista = document.getElementById('lista-pessoas');
-        const modal = document.getElementById('modalLista');
-const modalBody = document.getElementById('modal-body'); // ← Isso só funciona se o HTML estiver lá!
 
+        // Elementos do modal de edição
+        const modalEdit = document.getElementById('modalEdit');
+        const closeEdit = document.getElementById('closeEdit');
+        const btnCancelarEdit = document.getElementById('btnCancelarEdit');
+        const btnSalvarEdit = document.getElementById('btnSalvarEdit');
+
+        // === CADASTRAR ===
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-
             const formData = new FormData(form);
-            formData.append('acao', 'cadastrar');
+            const acao = formData.get('acao') || 'cadastrar';
+            formData.set('acao', acao);
 
             fetch('../Controller/controlePessoa.php', {
                 method: 'POST',
@@ -70,13 +193,16 @@ const modalBody = document.getElementById('modal-body'); // ← Isso só funcion
                 alert(data.mensagem);
                 if (data.status === 'sucesso') {
                     form.reset();
+                    document.querySelector('input[name="id"]')?.remove();
+                    document.querySelector('input[name="acao"]')?.remove();
+                    document.querySelector('.btnCadastro').value = 'Cadastrar';
+                    btnListar.click(); // Atualiza lista
                 }
             })
-            .catch(err => {
-                alert('Erro ao cadastrar: ' + err.message);
-            });
+            .catch(err => alert('Erro: ' + err.message));
         });
 
+        // === LISTAR ===
         btnListar.addEventListener('click', function() {
             fetch('../Controller/controlePessoa.php', {
                 method: 'POST',
@@ -84,91 +210,126 @@ const modalBody = document.getElementById('modal-body'); // ← Isso só funcion
             })
             .then(response => response.json())
             .then(data => {
-    if (data.status === 'sucesso' && data.dados.length > 0) {
-        let tabela = `
-            <div class="modal-body-table">
-                <table>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
-                        <th>CPF</th>
-                        <th>Telefone</th>
-                        <th>Ações</th>
-                    </tr>
-        `;
-        data.dados.forEach(pessoa => {
-            tabela += `
-                <tr>
-                    <td>${pessoa.id}</td>
-                    <td>${pessoa.nome}</td>
-                    <td>${pessoa.cpf}</td>
-                    <td>${pessoa.telefone}</td>
-                    <td>
-                        <button 
-                            class="btnExcluir"
-                            onclick="excluirPessoa(${pessoa.id}, '${pessoa.nome}')"
-                            style="
-                                background: #e74c3c; 
-                                color: white; 
-                                border: none; 
-                                padding: 6px 10px; 
-                                font-size: 0.85em; 
-                                border-radius: 4px; 
-                                cursor: pointer;">
-                            Excluir
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
-        tabela += `</table></div>`;
-        tabela += `<div class="modal-footer">Total: ${data.dados.length} pessoa(s) cadastrada(s)</div>`;
-        modalBody.innerHTML = tabela;
-    } else if (data.dados && data.dados.length === 0) {
-        modalBody.innerHTML = `
-            <p style="text-align: center; color: #777; font-style: italic; padding: 20px;">
-                😊 Nenhuma pessoa cadastrada ainda.
-            </p>
-        `;
-    } else {
-        modalBody.innerHTML = `
-            <p style="color: red; text-align: center;">
-                ⚠️ Erro: ${data.mensagem}
-            </p>
-        `;
-    }
-})
+                if (data.status === 'sucesso' && data.dados.length > 0) {
+                    let tabela = `
+                        <h3>Pessoas Cadastradas</h3>
+                        <table>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Telefone</th>
+                                <th>Ações</th>
+                            </tr>
+                    `;
+                    data.dados.forEach(pessoa => {
+                        tabela += `
+                            <tr>
+                                <td>${pessoa.id}</td>
+                                <td>${pessoa.nome}</td>
+                                <td>${pessoa.cpf}</td>
+                                <td>${pessoa.telefone}</td>
+                                <td>
+                                    <button onclick="abrirModalEditar(${pessoa.id})" style="background:#f39c12; color:white; border:none; padding:5px 10px; margin:2px; cursor:pointer; border-radius:4px;">Editar</button>
+                                    <button onclick="excluirPessoa(${pessoa.id}, '${pessoa.nome}')" style="background:#e74c3c; color:white; border:none; padding:5px 10px; margin:2px; cursor:pointer; border-radius:4px;">Excluir</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tabela += `</table>`;
+                    lista.innerHTML = tabela;
+                } else if (data.dados && data.dados.length === 0) {
+                    lista.innerHTML = '<p>Nenhuma pessoa cadastrada.</p>';
+                } else {
+                    lista.innerHTML = `<p style="color: red;">Erro: ${data.mensagem}</p>`;
+                }
+            })
             .catch(err => {
-                lista.innerHTML = `<p style="color: red;">Erro na comunicação: ${err.message}</p>`;
+                lista.innerHTML = `<p style="color: red;">Erro: ${err.message}</p>`;
             });
         });
-        // Função para excluir uma pessoa
-function excluirPessoa(id, nome) {
-    const confirmado = confirm(`Tem certeza que deseja excluir ${nome}?`);
-    
-    if (!confirmado) return;
 
-    fetch('../Controller/controlePessoa.php', {
-        method: 'POST',
-        body: new URLSearchParams({
-            'acao': 'excluir',
-            'id': id
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert(data.mensagem);
-        if (data.status === 'sucesso') {
-            // Atualiza a lista automaticamente
-            document.getElementById('btnListar').click();
+        // === ABRIR MODAL DE EDIÇÃO ===
+        function abrirModalEditar(id) {
+            fetch('../Controller/controlePessoa.php', {
+                method: 'POST',
+                body: new URLSearchParams({ 'acao': 'buscarPorId', 'id': id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'sucesso') {
+                    const p = data.dados;
+                    document.getElementById('editId').value = p.id;
+                    document.getElementById('editNome').value = p.nome;
+                    document.getElementById('editCpf').value = p.cpf;
+                    document.getElementById('editTelefone').value = p.telefone;
+                    modalEdit.style.display = 'block';
+                } else {
+                    alert('Erro: ' + data.mensagem);
+                }
+            })
+            .catch(err => alert('Erro ao carregar: ' + err.message));
         }
-    })
-    .catch(err => {
-        alert('Erro ao excluir: ' + err.message);
-    });
-}
-        
-        
+
+        // === FECHAR MODAL DE EDIÇÃO ===
+        closeEdit.onclick = () => modalEdit.style.display = 'none';
+        btnCancelarEdit.onclick = () => modalEdit.style.display = 'none';
+        window.onclick = function(event) {
+            if (event.target === modalEdit) {
+                modalEdit.style.display = 'none';
+            }
+        };
+
+        // === SALVAR EDIÇÃO ===
+        btnSalvarEdit.onclick = function() {
+            const id = document.getElementById('editId').value;
+            const nome = document.getElementById('editNome').value.trim();
+            const cpf = document.getElementById('editCpf').value.trim();
+            const telefone = document.getElementById('editTelefone').value.trim();
+
+            if (!id || !nome || !cpf || !telefone) {
+                alert('Todos os campos são obrigatórios.');
+                return;
+            }
+
+            fetch('../Controller/controlePessoa.php', {
+                method: 'POST',
+                body: new URLSearchParams({
+                    'acao': 'atualizar',
+                    'id': id,
+                    'nome': nome,
+                    'cpf': cpf,
+                    'telefone': telefone
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.mensagem);
+                if (data.status === 'sucesso') {
+                    modalEdit.style.display = 'none';
+                    btnListar.click(); // Atualiza a lista
+                }
+            })
+            .catch(err => alert('Erro ao salvar: ' + err.message));
+        };
+
+        // === EXCLUIR PESSOA ===
+        function excluirPessoa(id, nome) {
+            if (confirm(`Tem certeza que deseja excluir ${nome}?`)) {
+                fetch('../Controller/controlePessoa.php', {
+                    method: 'POST',
+                    body: new URLSearchParams({ 'acao': 'excluir', 'id': id })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.mensagem);
+                    if (data.status === 'sucesso') {
+                        btnListar.click();
+                    }
+                })
+                .catch(err => alert('Erro: ' + err.message));
+            }
+        }
     </script>
 </body>
 </html>
